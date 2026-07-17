@@ -4,7 +4,21 @@ linters:
   enable:
     - dlinter
     - unused
+    - dupl
+    # gocognit measures cognitive complexity (how hard a function is to read),
+    # not cyclomatic complexity (how many paths through it exist). We prefer
+    # it over gocyclo because it better tracks nesting and boolean-logic
+    # density, which is what actually hurts reviewability here.
+    - gocognit
   settings:
+    dupl:
+      # Initial threshold, conservative to avoid noise on small, legitimately
+      # similar analyzer/test scaffolding. Tune down as the codebase grows.
+      threshold: 100
+    gocognit:
+      # Initial threshold; tunable. Below this, cognitive load is considered
+      # acceptable for this codebase's size.
+      min-complexity: 20
     custom:
       dlinter:
         type: module
