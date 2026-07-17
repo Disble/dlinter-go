@@ -143,3 +143,33 @@ check added in Task 6 (`unit` job), which fails the build if
 module linter itself catch layering violations is deferred to a future
 slice — the config schema (`.golangci.yml` roles) is already in place so
 that rule can be dropped in without a config migration.
+
+## deadcode False-Positive: Plugin Registration Surface (Task 6/7)
+
+`golang.org/x/tools/cmd/deadcode` traces reachability only from `main`
+packages found among the packages passed on its command line. This
+module's only `main` package is `cmd/dlinter`, and per the Repo Layout
+Contract it deliberately does **not** import the root `dlinter` package
+(that would be scaffolding logic, which the spec forbids for this slice).
+
+The root `dlinter` package (`plugin.go`) is actually invoked by
+golangci-lint's own `custom-gcl` framework — an external, generated `main`
+outside this module — via `init()` registration and the `LinterPlugin`
+interface. `deadcode` has no visibility into that external caller, so it
+reports the following as dead even though they are real, externally
+invoked API:
+
+- `plugin.go`: `init#1` (the `register.Plugin` call), `New`,
+  `plugin.BuildAnalyzers`, `plugin.GetLoadMode`
+- `pkg/analyzers/skeleton/analyzer.go`: `NewAnalyzer`
+
+**Resolution**: both the CI `deadcode` job and the Makefile's `deadcode`
+target filter out exactly these five known lines via an explicit `grep -v`
+allowlist, then fail on any remaining output. This was verified two ways:
+(1) confirmed the filtered command reports "no dead code found" on a clean
+tree, and (2) added a genuinely unused function (`trulyDeadHelper` in
+`settings.go`) and confirmed the filtered command still caught and
+reported it, proving the allowlist is bounded and does not mask real dead
+code. If new plugin-entrypoint-style functions are added in a future
+slice, this allowlist must be extended explicitly — it is not a blanket
+exception.
