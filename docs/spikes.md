@@ -1,8 +1,21 @@
 # Spikes
 
-This document records the empirical evidence for the two spikes that gate
-the rest of the foundation-architecture slice: the self-referential
-`custom-gcl` build (Spike A) and the Go 1.26 version pin (Spike B).
+This document records the empirical evidence for the foundation-architecture
+walking skeleton: the two spikes that gated the rest of the slice (Spike A,
+Spike B), the `.golangci.yml` self-applied config, and two CI/tooling
+false-positive classes discovered along the way.
+
+## Summary
+
+| Item | Outcome |
+|------|---------|
+| Spike A (self-referential build) | PASS, first attempt |
+| Spike B (Go 1.26 version pin) | PASS, first candidate (`v2.1.0`) |
+| `import:` line needed? | No |
+| `module:` field needed? | Yes (undocumented in the design draft) |
+| `.golangci.yml` key path | Matches design as written, no deviation |
+| Self-lint scope gap | Documented — real layering enforcement deferred |
+| deadcode false positives | Documented — bounded allowlist in CI + Makefile |
 
 ## Spike A: Self-Referential Dogfood Build
 
