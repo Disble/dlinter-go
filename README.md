@@ -14,6 +14,74 @@ dlinter-go is the Go sibling of [dlinter-ts-react](https://github.com/Disble/dli
 
 Early development. This repository enforces its own rules on itself — self-governance is the proof that the rules work.
 
+## Use in your project
+
+dlinter ships as a [golangci-lint module plugin](https://golangci-lint.run/docs/plugins/module-plugins/): you build a custom golangci-lint binary that bundles it, then enable it like any other linter.
+
+1. Create `.custom-gcl.yml` in your repo:
+
+   ```yaml
+   version: v2.1.0
+   plugins:
+     - module: github.com/Disble/dlinter-go
+       version: v0.1.0
+   ```
+
+2. Build the custom binary (requires Go and `golangci-lint` v2.1.0 on `PATH`):
+
+   ```sh
+   golangci-lint custom
+   ```
+
+   This produces `./custom-gcl` (`.exe` on Windows) — golangci-lint plus the `dlinter` linter.
+
+3. Declare your architecture in `.golangci.yml`. Assign each package a role and state which roles it may depend on:
+
+   ```yaml
+   version: "2"
+
+   linters:
+     enable:
+       - dlinter
+     settings:
+       custom:
+         dlinter:
+           type: module
+           description: package-role / import-direction contracts
+           settings:
+             roles:
+               core:
+                 packages:
+                   - internal/domain        # exact match
+                 mayDependOn: []
+               adapter:
+                 packages:
+                   - internal/adapters/     # trailing slash = subtree
+                 mayDependOn:
+                   - core
+               entrypoint:
+                 packages:
+                   - "."                    # module root
+                   - cmd/app
+                 mayDependOn:
+                   - core
+                   - adapter
+   ```
+
+4. Run it:
+
+   ```sh
+   ./custom-gcl run ./...
+   ```
+
+   An import that crosses a boundary not listed in `mayDependOn` fails the lint:
+
+   ```
+   role "core" may not depend on role "adapter" (import "example.com/app/internal/adapters/db")
+   ```
+
+Path matching: `"."` matches only the module root, a trailing `/` matches the whole subtree (longest prefix wins), anything else matches exactly. Packages with no role are ignored, as are stdlib and external imports — the rules constrain only your own module's graph.
+
 ## Local setup
 
 1. Build the self-lint binary (`golangci-lint` v2.1.0 must be on `PATH`):
