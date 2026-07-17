@@ -1,22 +1,21 @@
 # dlinter-go
 
+[![CI](https://github.com/Disble/dlinter-go/actions/workflows/ci.yml/badge.svg)](https://github.com/Disble/dlinter-go/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Disble/dlinter-go)](https://github.com/Disble/dlinter-go/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Disble/dlinter-go.svg)](https://pkg.go.dev/github.com/Disble/dlinter-go)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Architecture governance for Go — as build-time guarantees, not prose.
 
-dlinter-go is the Go sibling of [dlinter-ts-react](https://github.com/Disble/dlinter-ts-react). Instead of reinventing the linting wheel, it builds on the ecosystem's giant shoulders:
+Declare which packages belong to which architectural role (`core`, `adapter`, `entrypoint`, or your own) and which roles each may depend on. Any import that crosses a forbidden boundary fails the lint:
 
-- **Host**: [golangci-lint](https://golangci-lint.run) via its [Module Plugin System](https://golangci-lint.run/docs/plugins/module-plugins/) — one custom binary, one config, one CI step.
-- **Custom rules**: opinionated architecture and best-practice analyzers built on `golang.org/x/tools/go/analysis` (import-direction contracts, package-role conventions, layer boundaries).
-- **Preset**: a curated `.golangci.yml` composing the best of the built-in linters (`unused`, `dupl`, `gocognit`, `depguard`, ...) with tuned, documented severities.
-- **Scaffolding**: a `dlinter init` CLI that generates `.golangci.yml`, `.custom-gcl.yml`, git hooks, and CI config.
-- **Dead code**: the official [`deadcode`](https://go.dev/blog/deadcode) tool orchestrated as a periodic CI step (whole-program RTA analysis cannot live inside golangci-lint).
+```
+internal/rolegraph/rolegraph.go:15:2: mayDependOn: role "core" may not depend on role "adapter" (import "example.com/app/internal/adapters/db")
+```
 
-## Status
+dlinter ships as a [golangci-lint module plugin](https://golangci-lint.run/docs/plugins/module-plugins/), so it runs inside the toolchain you already use — one binary, one config, one CI step. This repository enforces its own rules on itself; self-governance is the proof that the rules work.
 
-Early development. This repository enforces its own rules on itself — self-governance is the proof that the rules work.
-
-## Use in your project
-
-dlinter ships as a [golangci-lint module plugin](https://golangci-lint.run/docs/plugins/module-plugins/): you build a custom golangci-lint binary that bundles it, then enable it like any other linter.
+## Quick start
 
 1. Create `.custom-gcl.yml` in your repo:
 
@@ -27,15 +26,13 @@ dlinter ships as a [golangci-lint module plugin](https://golangci-lint.run/docs/
        version: v0.1.0
    ```
 
-2. Build the custom binary (requires Go and `golangci-lint` v2.1.0 on `PATH`):
+2. Build the custom binary (requires Go and [golangci-lint](https://golangci-lint.run) v2.1.0):
 
    ```sh
    golangci-lint custom
    ```
 
-   This produces `./custom-gcl` (`.exe` on Windows) — golangci-lint plus the `dlinter` linter.
-
-3. Declare your architecture in `.golangci.yml`. Assign each package a role and state which roles it may depend on:
+3. Declare your architecture in `.golangci.yml`:
 
    ```yaml
    version: "2"
@@ -74,46 +71,56 @@ dlinter ships as a [golangci-lint module plugin](https://golangci-lint.run/docs/
    ./custom-gcl run ./...
    ```
 
-   An import that crosses a boundary not listed in `mayDependOn` fails the lint:
+## Configuration
 
-   ```
-   role "core" may not depend on role "adapter" (import "example.com/app/internal/adapters/db")
-   ```
+Each role lists the packages that belong to it and the roles it may depend on.
 
-Path matching: `"."` matches only the module root, a trailing `/` matches the whole subtree (longest prefix wins), anything else matches exactly. Packages with no role are ignored, as are stdlib and external imports — the rules constrain only your own module's graph.
+| Pattern | Matches |
+|---------|---------|
+| `internal/domain` | exactly that package |
+| `internal/adapters/` (trailing `/`) | the whole subtree; longest prefix wins |
+| `"."` | only the module root package |
 
-## Local setup
+Rules that keep the check predictable:
 
-1. Build the self-lint binary (`golangci-lint` v2.1.0 must be on `PATH`):
+- A role may always depend on itself.
+- Packages with no role are ignored, as are stdlib and external imports — the rules constrain only your own module's import graph.
+- Exact and root matches always win over prefix matches.
+
+## Why golangci-lint instead of a standalone tool?
+
+golangci-lint is already the orchestrator of the Go linting ecosystem (dead code via `unused`, duplication via `dupl`, complexity via `gocognit`, 100+ linters). dlinter adds the missing piece — enforceable architecture contracts — without asking your team to adopt another binary, config format, or CI step.
+
+## Contributing
+
+Development happens through the standard fork-and-PR flow. Local setup:
+
+1. Build the self-lint binary (`golangci-lint` v2.1.0 on `PATH`):
 
    ```sh
    golangci-lint custom
    ```
 
-   This reads `.custom-gcl.yml` and produces `./bin/custom-gcl` (`.exe` on
-   Windows), a golangci-lint build that bundles `dlinter` alongside every
-   standard linter.
+   This produces `./bin/custom-gcl`, a golangci-lint build that bundles `dlinter` alongside every standard linter.
 
-2. Install [lefthook](https://github.com/evilmartians/lefthook) and wire the
-   local git hooks:
+2. Install [lefthook](https://github.com/evilmartians/lefthook) and wire the git hooks:
 
    ```sh
    lefthook install
    ```
 
-   `pre-commit` runs `gofmt -l` on staged files, the self-lint
-   (`./bin/custom-gcl run ./...`), `go test ./...`, and `deadcode` —
-   mirroring `.github/workflows/ci.yml` so failures surface locally
-   before CI.
+   `pre-commit` runs `gofmt`, the self-lint (`./bin/custom-gcl run ./...`), `go test ./...`, and [`deadcode`](https://go.dev/blog/deadcode) — mirroring CI so failures surface locally first.
 
-3. Install [`deadcode`](https://go.dev/blog/deadcode) (used by the
-   `pre-commit` hook and the `deadcode` Makefile target; installed
-   automatically by the hook on first commit if missing):
+3. Run the tests:
 
    ```sh
-   go install golang.org/x/tools/cmd/deadcode@latest
+   go test ./...
    ```
+
+   Analyzer behavior is specified with [`analysistest`](https://pkg.go.dev/golang.org/x/tools/go/analysis/analysistest) fixtures under `pkg/analyzers/*/testdata/`; new rules follow the same pattern.
+
+Conventional commits are required (`feat:`, `fix:`, `docs:`, ...). See [docs/spikes.md](docs/spikes.md) for recorded design decisions and known gotchas (self-referential plugin build, deadcode allowlist rationale).
 
 ## License
 
-MIT
+[MIT](LICENSE)
