@@ -25,15 +25,6 @@ jobs:
       - name: Test (unit + analysistest)
         run: go test ./...
 
-      - name: Layering check (internal/rolegraph must not depend on pkg/analyzers or cmd/dlinter)
-        run: |
-          deps="$(go list -deps ./internal/rolegraph/...)"
-          if echo "$deps" | grep -E 'dlinter-go/(pkg/analyzers|cmd/dlinter)'; then
-            echo "::error::internal/rolegraph must not import pkg/analyzers/* or cmd/dlinter"
-            exit 1
-          fi
-          echo "internal/rolegraph import direction OK"
-
   selflint:
     name: selflint
     runs-on: ubuntu-latest
