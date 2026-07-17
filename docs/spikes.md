@@ -174,7 +174,7 @@ invoked API:
 
 - `plugin.go`: `init#1` (the `register.Plugin` call), `New`,
   `plugin.BuildAnalyzers`, `plugin.GetLoadMode`
-- `pkg/analyzers/skeleton/analyzer.go`: `NewAnalyzer`
+- `pkg/analyzers/maydependon/analyzer.go`: `NewAnalyzer`
 
 **Resolution**: both the CI `deadcode` job and the Makefile's `deadcode`
 target filter out exactly these five known lines via an explicit `grep -v`
@@ -186,3 +186,33 @@ reported it, proving the allowlist is bounded and does not mask real dead
 code. If new plugin-entrypoint-style functions are added in a future
 slice, this allowlist must be extended explicitly — it is not a blanket
 exception.
+
+### mayDependOn MVP: transitive false positives through NewAnalyzer's closure
+
+Wiring the real `mayDependOn` analyzer (per `sdd/maydependon-mvp`) widened
+this false-positive class. `cmd/dlinter/main.go` address-takes only the
+shared, unwired `maydependon.Analyzer` var (to keep the constructor
+injection pattern in Design D1: `NewAnalyzer(g *rolegraph.Graph)` builds a
+*separate* analyzer value whose `Run` closes over an injected Graph, so the
+Graph can never leak into the wrong role). Because `NewAnalyzer` itself is
+called only from `plugin.go`'s `BuildAnalyzers` — already in the exception
+list above — `deadcode`'s reachability analysis cannot trace into
+`NewAnalyzer`'s body from any in-module `main`. That makes everything only
+reachable through it also read as dead:
+
+- `pkg/analyzers/maydependon/analyzer.go`: `runWithGraph` (the closure body)
+  and `relativize` (its helper)
+- `internal/rolegraph/rolegraph.go`: `New`, `classify`, `Graph.Resolve`,
+  `Graph.Allowed` (called only from `plugin.go`'s `BuildAnalyzers`, which is
+  itself already exempted)
+
+This is the same false-positive class as `NewAnalyzer` itself, just one
+hop further down the call graph — none of these six symbols are reachable
+from `cmd/dlinter`'s real `main`, all six are real, externally-invoked API
+via golangci-lint's plugin framework. The allowlist in `ci.yml`,
+`scripts/hooks/deadcode-check.sh`, and `Makefile` was extended with two
+additional filename-scoped alternatives (`analyzer\.go:.*unreachable func:
+(NewAnalyzer|runWithGraph|relativize)` and `rolegraph\.go:.*unreachable
+func: (New|classify|Graph\.Resolve|Graph\.Allowed)`), verified the same way
+as above: filtered output is empty on a clean tree, and `deadcode`
+continues to catch genuinely unused code outside this named set.
