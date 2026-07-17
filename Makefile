@@ -20,9 +20,12 @@ test:
 
 # deadcode mirrors CI's exception list for the plugin registration surface
 # (see docs/spikes.md): those functions are invoked by golangci-lint's
-# external custom-gcl framework, not by cmd/dlinter.
+# external custom-gcl framework, not by cmd/dlinter, and the helpers they
+# alone reach (rolegraph.New/classify/Graph.Resolve/Graph.Allowed,
+# maydependon's runWithGraph/relativize) share the same false-positive
+# class.
 deadcode:
-	@out="$$(go run golang.org/x/tools/cmd/deadcode@latest ./... 2>&1 | grep -v -E '(plugin\.go:.*unreachable func: (init#1|New|plugin\.BuildAnalyzers|plugin\.GetLoadMode)|analyzer\.go:.*unreachable func: NewAnalyzer)')"; \
+	@out="$$(go run golang.org/x/tools/cmd/deadcode@latest ./... 2>&1 | grep -v -E '(plugin\.go:.*unreachable func: (init#1|New|plugin\.BuildAnalyzers|plugin\.GetLoadMode)|analyzer\.go:.*unreachable func: (NewAnalyzer|runWithGraph|relativize)|rolegraph\.go:.*unreachable func: (New|classify|Graph\.Resolve|Graph\.Allowed))')"; \
 	if [ -n "$$out" ]; then \
 		echo "$$out"; \
 		echo "deadcode found unreachable code (see output above)"; \
