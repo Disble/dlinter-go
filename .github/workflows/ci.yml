@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test (unit + analysistest)
+        run: go test ./...
+
+      - name: Layering check (internal/rolegraph must not depend on pkg/analyzers or cmd/dlinter)
+        run: |
+          deps="$(go list -deps ./internal/rolegraph/...)"
+          if echo "$deps" | grep -E 'dlinter-go/(pkg/analyzers|cmd/dlinter)'; then
+            echo "::error::internal/rolegraph must not import pkg/analyzers/* or cmd/dlinter"
+            exit 1
+          fi
+          echo "internal/rolegraph import direction OK"
+
+  selflint:
+    name: selflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Cache custom-gcl
+        id: cache-custom-gcl
+        uses: actions/cache@v4
+        with:
+          path: ./bin/custom-gcl
+          key: custom-gcl-${{ hashFiles('.custom-gcl.yml', 'go.sum') }}
+
+      - name: Build custom-gcl
+        if: steps.cache-custom-gcl.outputs.cache-hit != 'true'
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.0
+          "$(go env GOPATH)/bin/golangci-lint" custom
+
+      - name: Self-lint (dlinter against the real package graph)
+        run: ./bin/custom-gcl run ./...
+
+  deadcode:
+    name: deadcode
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Run deadcode
+        run: |
+          # Known false-positive exception: golangci-lint's Module Plugin
+          # System calls plugin.go's registration surface (init, New,
+          # BuildAnalyzers, GetLoadMode) and skeleton.NewAnalyzer from the
+          # *external* custom-gcl framework, not from cmd/dlinter (this
+          # module's only main package, which deliberately has no
+          # scaffolding logic per the Repo Layout Contract). deadcode can
+          # only trace reachability from main packages inside this module,
+          # so it reports these as dead even though they are real,
+          # externally-invoked API. See docs/spikes.md.
+          out="$(go run golang.org/x/tools/cmd/deadcode@latest ./... 2>&1 | grep -v -E '(plugin\.go:.*unreachable func: (init#1|New|plugin\.BuildAnalyzers|plugin\.GetLoadMode)|analyzer\.go:.*unreachable func: NewAnalyzer)')"
+          if [ -n "$out" ]; then
+            echo "$out"
+            echo "::error::deadcode found unreachable code (see output above)"
+            exit 1
+          fi
+          echo "no dead code found (plugin-entrypoint exceptions documented in docs/spikes.md)"
