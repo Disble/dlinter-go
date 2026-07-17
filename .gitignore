@@ -1,0 +1,19 @@
+# Binaries
+/custom-gcl
+/custom-gcl.exe
+/dist/
+*.exe
+*.test
+*.out
+
+# Coverage
+coverage.txt
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
