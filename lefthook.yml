@@ -1,0 +1,27 @@
+# Local pre-commit/pre-push gate for dlinter-go. Mirrors the checks in
+# .github/workflows/ci.yml so failures surface before CI, not after.
+#
+# Setup: run `lefthook install` once after cloning (see README.md).
+#
+# Checks live in scripts/hooks/*.sh rather than inline `run:` blocks:
+# lefthook on Windows passes multi-line scripts through
+# `sh.exe -c "<script>"`, and embedded double quotes in the script break
+# that outer quoting. Keeping commands to a single quote-free line sidesteps
+# the problem.
+
+pre-commit:
+  commands:
+    gofmt:
+      glob: "*.go"
+      run: bash scripts/hooks/gofmt-check.sh {staged_files}
+    selflint:
+      run: bash scripts/hooks/selflint.sh
+    test:
+      run: go test ./...
+
+# deadcode runs a whole-program RTA analysis, which is slower than the
+# pre-commit checks — keep it at push time so commits stay fast.
+pre-push:
+  commands:
+    deadcode:
+      run: bash scripts/hooks/deadcode-check.sh
