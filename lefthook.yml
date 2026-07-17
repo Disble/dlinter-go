@@ -9,6 +9,9 @@
 # that outer quoting. Keeping commands to a single quote-free line sidesteps
 # the problem.
 
+# deadcode runs at commit time (not push) by explicit project decision:
+# catching dead code before it enters history matters more here than commit
+# speed, since dead-code discipline is part of what this project sells.
 pre-commit:
   commands:
     gofmt:
@@ -18,10 +21,5 @@ pre-commit:
       run: bash scripts/hooks/selflint.sh
     test:
       run: go test ./...
-
-# deadcode runs a whole-program RTA analysis, which is slower than the
-# pre-commit checks — keep it at push time so commits stay fast.
-pre-push:
-  commands:
     deadcode:
       run: bash scripts/hooks/deadcode-check.sh

@@ -102,13 +102,13 @@ Path matching: `"."` matches only the module root, a trailing `/` matches the wh
    ```
 
    `pre-commit` runs `gofmt -l` on staged files, the self-lint
-   (`./bin/custom-gcl run ./...`), and `go test ./...`. `pre-push` runs
-   `deadcode` (see below) — mirroring `.github/workflows/ci.yml` so failures
-   surface locally before CI.
+   (`./bin/custom-gcl run ./...`), `go test ./...`, and `deadcode` —
+   mirroring `.github/workflows/ci.yml` so failures surface locally
+   before CI.
 
-3. Install [`deadcode`](https://go.dev/blog/deadcode) (only needed for the
-   `pre-push` hook and the `deadcode` Makefile target; installed
-   automatically by the hook on first push if missing):
+3. Install [`deadcode`](https://go.dev/blog/deadcode) (used by the
+   `pre-commit` hook and the `deadcode` Makefile target; installed
+   automatically by the hook on first commit if missing):
 
    ```sh
    go install golang.org/x/tools/cmd/deadcode@latest
