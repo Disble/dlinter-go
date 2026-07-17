@@ -78,10 +78,68 @@ re-verify (via `golangci-lint custom` + `go test ./...`) that
 the new pinned golangci-lint version. **No automated check enforces this
 in this slice** — it is a manual step for whoever bumps the pin.
 
-## `.golangci.yml` key-path confirmation (Task 5)
+## `.golangci.yml` Key-Path Confirmation (Task 5)
 
-See the "Self-Applied Config" section below, added after Task 5 lands.
+The design's draft key path `linters.settings.custom.dlinter` (v2 schema)
+is **correct as written** for `custom-gcl` v2.1.0 — no deviation. The final
+config:
 
-## Self-lint scope gap (Task 5)
+```yaml
+version: "2"
+linters:
+  enable: [dlinter, unused]
+  settings:
+    custom:
+      dlinter:
+        type: module
+        description: package-role / import-direction contracts for dlinter-go
+        settings:
+          roles:
+            core:       {packages: [internal/rolegraph], mayDependOn: []}
+            adapter:    {packages: [pkg/analyzers/],      mayDependOn: [core]}
+            entrypoint: {packages: [".", cmd/dlinter],    mayDependOn: [core, adapter]}
+```
 
-See the "Self-Lint Scope Gap" section below, added after Task 5 lands.
+`golangci-lint run -v` confirms `dlinter` is loaded and listed among the 6
+active linters (`level=info msg="Loaded : dlinter"`, `level=info
+msg="[lintersdb] Active 6 linters: [dlinter errcheck govet ineffassign
+staticcheck unused]"`).
+
+**Real-graph proof**: a temporary `skeletonMarker` function was added to
+`internal/rolegraph/rolegraph.go` (a real, non-testdata source file) and
+`./bin/custom-gcl.exe run --enable-only dlinter ./...` reported:
+
+```
+internal\rolegraph\rolegraph.go:17:6: skeleton: skeletonMarker: walking-skeleton marker function (dlinter)
+```
+
+confirming the `dlinter` module linter is invoked against the real package
+graph, not only `testdata`. The temporary function was then removed and
+`go test ./...` + `./bin/custom-gcl.exe run ./...` (0 issues) reconfirmed
+the clean state.
+
+Note: without `--enable-only dlinter`, the default `unused` linter reported
+the finding first and `dlinter`'s own diagnostic did not appear in the
+default multi-linter run output for that single case — this is normal
+golangci-lint behavior (linters run independently and all report, but
+`unused` and `dlinter` both flagged the same line so log output should
+show both; verify explicitly with `--enable-only <linter>` when isolating
+a specific linter's behavior during development).
+
+## Self-Lint Scope Gap (Task 5)
+
+The spec's "Self-lint catches a layering violation" scenario is **not**
+satisfied by the `dlinter` module linter in this slice. The `skeleton`
+analyzer only flags a function literally named `skeletonMarker` — it has no
+real import-direction evaluation logic (`internal/rolegraph` intentionally
+ships with no evaluation code yet, per Task 3).
+
+This is a **known, intentional scope gap for this slice**, not an
+oversight. Per the design's "Import-Direction Contract" section, the
+layering-violation scenario is satisfied instead by the `go list`-based CI
+check added in Task 6 (`unit` job), which fails the build if
+`internal/rolegraph`'s dependency list includes `pkg/analyzers` or
+`cmd/dlinter`. The real `mayDependOn` rule that will let the `dlinter`
+module linter itself catch layering violations is deferred to a future
+slice — the config schema (`.golangci.yml` roles) is already in place so
+that rule can be dropped in without a config migration.

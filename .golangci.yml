@@ -1,0 +1,29 @@
+version: "2"
+
+linters:
+  enable:
+    - dlinter
+    - unused
+  settings:
+    custom:
+      dlinter:
+        type: module
+        description: package-role / import-direction contracts for dlinter-go
+        settings:
+          roles:
+            core:
+              packages:
+                - internal/rolegraph
+              mayDependOn: []
+            adapter:
+              packages:
+                - pkg/analyzers/
+              mayDependOn:
+                - core
+            entrypoint:
+              packages:
+                - "."
+                - cmd/dlinter
+              mayDependOn:
+                - core
+                - adapter
