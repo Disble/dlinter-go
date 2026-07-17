@@ -1,0 +1,57 @@
+# dlinter-go — recommended preset
+#
+# A curated golangci-lint configuration that turns on architecture governance
+# (dlinter) alongside the best-practice linters every Go project benefits from:
+# documentation discipline (revive), duplication (dupl), cognitive complexity
+# (gocognit), and dead-symbol detection (unused).
+#
+# This is a TEMPLATE, not a remote import — golangci-lint has no mechanism to
+# extend a module's config. Copy it to your repo as `.golangci.yml`, then edit
+# the `roles` block to match your architecture. (`dlinter init` will scaffold
+# this for you in a future release.) Requires the custom binary built from a
+# `.custom-gcl.yml` that includes `github.com/Disble/dlinter-go`.
+version: "2"
+
+linters:
+  enable:
+    - dlinter # architecture: package-role / import-direction contracts
+    - revive # documentation: exported symbols and packages carry doc comments
+    - dupl # duplication: copy-pasted code fragments
+    - gocognit # complexity: cognitive load per function
+    - unused # dead code: unused symbols within the module
+  settings:
+    dupl:
+      threshold: 100
+    gocognit:
+      min-complexity: 20
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+    custom:
+      dlinter:
+        type: module
+        description: package-role / import-direction contracts
+        settings:
+          # Replace these example roles with your own. Each role lists the
+          # packages that belong to it and the roles it may depend on. Path
+          # matching: exact ("internal/domain"), subtree (trailing "/"), or
+          # module root ("."). Unroled, stdlib, and external imports are
+          # ignored — rules constrain only your own module's graph.
+          roles:
+            core:
+              packages:
+                - internal/domain
+              mayDependOn: []
+            adapter:
+              packages:
+                - internal/adapters/
+              mayDependOn:
+                - core
+            entrypoint:
+              packages:
+                - "."
+                - cmd/
+              mayDependOn:
+                - core
+                - adapter

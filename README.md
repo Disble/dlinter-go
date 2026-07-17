@@ -71,6 +71,8 @@ dlinter ships as a [golangci-lint module plugin](https://golangci-lint.run/docs/
    ./custom-gcl run ./...
    ```
 
+The config above enables only the architecture rule. For the full experience — architecture **plus** documentation discipline (`revive`), duplication (`dupl`), and cognitive complexity (`gocognit`) — start from [`recommended.golangci.yml`](recommended.golangci.yml) instead: copy it to `.golangci.yml` and edit the `roles` block. One binary, one config, the whole best-practice stack.
+
 ## Configuration
 
 Each role lists the packages that belong to it and the roles it may depend on.

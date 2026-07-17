@@ -10,6 +10,11 @@ linters:
     # it over gocyclo because it better tracks nesting and boolean-logic
     # density, which is what actually hurts reviewability here.
     - gocognit
+    # revive supplies the documentation discipline: every exported symbol and
+    # every package carries a doc comment. This is a solved problem in the Go
+    # ecosystem, so we reuse revive rather than reimplement it — dlinter's own
+    # custom analyzers are reserved for what the ecosystem lacks (architecture).
+    - revive
   settings:
     dupl:
       # Initial threshold, conservative to avoid noise on small, legitimately
@@ -19,6 +24,10 @@ linters:
       # Initial threshold; tunable. Below this, cognitive load is considered
       # acceptable for this codebase's size.
       min-complexity: 20
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
     custom:
       dlinter:
         type: module
