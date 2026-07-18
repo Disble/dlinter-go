@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-07-18
+
+### Fixed
+
+- **Preset rules no longer contradict each other.** `revive: file-length-limit`
+  now runs with `skipComments: true`. Previously it counted comment lines while
+  `requireDoc` mandated a doc comment on every unexported function, so obeying
+  one rule pushed a file toward violating the other — two files in a real
+  133-file codebase crossed the 400-line limit purely by adding the docs the
+  preset demands. File size measures code mass, which is what the lever exists
+  for; `funlen` already ignores comments for the same reason.
+
 ## [0.3.0] - 2026-07-18
 
 ### Added
@@ -68,6 +80,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Three-stage CI (unit tests + analysistest, self-lint, deadcode) and local
   lefthook gates (pre-commit: gofmt, self-lint, tests; pre-push: deadcode).
 
+[0.3.1]: https://github.com/Disble/dlinter-go/releases/tag/v0.3.1
 [0.3.0]: https://github.com/Disble/dlinter-go/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Disble/dlinter-go/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Disble/dlinter-go/releases/tag/v0.1.0

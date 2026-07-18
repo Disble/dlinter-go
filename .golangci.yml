@@ -85,12 +85,17 @@ linters:
           # version pinned via golangci-lint v2.12.2.
           arguments:
             - max: 400
-              # Count RAW lines. This preset also mandates doc comments; making
-              # comments free here would train the generator to treat them as
-              # weightless. File size is the WEAKEST lever -- its escape is
-              # sharding into foo2.go -- so it is set loose on purpose and is
-              # never the headline.
-              skipComments: false
+              # Comments are NOT counted, and that is a correction: the
+              # original reasoning (don't let a generator pad with free
+              # comments) assumed comments were optional. requireDoc makes a
+              # doc comment mandatory on every unexported func, so counting
+              # them punishes compliance -- two files in a real 133-file
+              # codebase crossed 400 purely by adding the docs this preset
+              # demands. File size measures CODE mass, which is what the
+              # lever is for; funlen already uses ignore-comments for the
+              # same reason. File size stays the WEAKEST lever -- its escape
+              # is sharding into foo2.go -- and is never the headline.
+              skipComments: true
               skipBlankLines: false
     custom:
       dlinter:
