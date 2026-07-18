@@ -42,37 +42,19 @@ jobs:
           path: ./bin/custom-gcl
           key: custom-gcl-${{ hashFiles('.custom-gcl.yml', 'go.sum') }}
 
-      - name: Probe golangci-lint clone (diagnostic)
-        if: steps.cache-custom-gcl.outputs.cache-hit != 'true'
-        run: |
-          # `golangci-lint custom` clones golangci-lint and swallows git's
-          # stderr, reporting only "exit status 128". Reproduce the exact
-          # clone here, anonymous and token-authenticated, with stderr
-          # visible, so the failure mode is diagnosable from the log.
-          git version
-          if git clone --branch v2.1.0 --single-branch --depth 1 \
-              https://github.com/golangci/golangci-lint.git /tmp/probe-anon; then
-            echo "PROBE anonymous clone: OK"
-          else
-            echo "PROBE anonymous clone: FAILED (exit $?)"
-          fi
-          if git clone --branch v2.1.0 --single-branch --depth 1 \
-              "https://x-access-token:${{ github.token }}@github.com/golangci/golangci-lint.git" /tmp/probe-token; then
-            echo "PROBE token clone: OK"
-          else
-            echo "PROBE token clone: FAILED (exit $?)"
-          fi
-          rm -rf /tmp/probe-anon /tmp/probe-token
-
       - name: Build custom-gcl
         if: steps.cache-custom-gcl.outputs.cache-hit != 'true'
         run: |
-          # Authenticate the internal clone via the workflow token; -v makes
-          # golangci-lint surface the captured git output on failure.
-          git config --global url."https://x-access-token:${{ github.token }}@github.com/golangci/".insteadOf "https://github.com/golangci/"
-          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.0
-          "$(go env GOPATH)/bin/golangci-lint" custom -v
-          git config --global --unset-all url."https://x-access-token:${{ github.token }}@github.com/golangci/".insteadOf
+          # Keep this version in sync with `version:` in .custom-gcl.yml.
+          #
+          # Do not pin below v2.12.2: golangci-lint <= v2.11 builds its
+          # internal clone with "-c advice.detachedHead=false" as a SINGLE
+          # argv element, so git parses the key with a leading space. git
+          # >= 2.54 rejects that ("invalid key:  advice.detachedHead"),
+          # which breaks `golangci-lint custom` on current runners. Fixed
+          # upstream by splitting the flag into two arguments.
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
+          "$(go env GOPATH)/bin/golangci-lint" custom
 
       - name: Self-lint (dlinter against the real package graph)
         run: ./bin/custom-gcl run ./...

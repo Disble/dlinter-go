@@ -58,8 +58,8 @@ linters:
         - name: exported
         - name: package-comments
         - name: file-length-limit
-          # Map-form arguments confirmed against revive v1.9.0 source, the
-          # version pinned via golangci-lint v2.1.0 (go.mod:82).
+          # Map-form arguments verified against revive v1.15.0, the
+          # version pinned via golangci-lint v2.12.2.
           arguments:
             - max: 400
               # Count RAW lines. This preset also mandates doc comments; making

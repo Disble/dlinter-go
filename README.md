@@ -40,13 +40,13 @@ File size is included only as a member of this set, never as the headline: it ex
 1. Create `.custom-gcl.yml` in your repo:
 
    ```yaml
-   version: v2.1.0
+   version: v2.12.2
    plugins:
      - module: github.com/Disble/dlinter-go
        version: v0.1.0
    ```
 
-2. Build the custom binary (requires Go and [golangci-lint](https://golangci-lint.run) v2.1.0):
+2. Build the custom binary (requires Go and [golangci-lint](https://golangci-lint.run) v2.12.2):
 
    ```sh
    golangci-lint custom
@@ -121,7 +121,7 @@ A machine-checked rule only holds if nobody can quietly turn it off. An AI agent
 
 Development happens through the standard fork-and-PR flow. Local setup:
 
-1. Build the self-lint binary (`golangci-lint` v2.1.0 on `PATH`):
+1. Build the self-lint binary (`golangci-lint` v2.12.2 on `PATH`):
 
    ```sh
    golangci-lint custom
