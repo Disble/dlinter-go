@@ -18,6 +18,16 @@ linters:
     - funlen
     - nolintlint
     - nestif
+    # revive: exported guarantees a doc comment EXISTS on the public surface;
+    # godoclint checks the ones that exist are well-formed (correct subject,
+    # proper godoc structure). Missing docs and wrong docs are different
+    # failures, and a misleading comment is worse than none.
+    #
+    # Neither requires comments on unexported symbols, deliberately: Go scopes
+    # doc requirements to the exported contract, and mandating them on private
+    # helpers reliably produces tautologies ("// run runs the thing") that
+    # train readers to ignore comments entirely.
+    - godoclint
   exclusions:
     rules:
       # Calibrated against a real 133-file codebase, not guessed: on that
