@@ -18,6 +18,21 @@ linters:
     - funlen
     - nolintlint
     - nestif
+  exclusions:
+    rules:
+      # Calibrated against a real 133-file codebase, not guessed: on that
+      # repo funlen fired 26 times and 23 of those (88%) were tests, and
+      # dupl split 11/11. Long test functions (setup, act, many explicit
+      # assertions) and repeated fixture scaffolding are idiomatic Go, not
+      # design smells — DRY-ing them usually hurts readability.
+      #
+      # gocognit and nestif deliberately still apply to tests: a test whose
+      # control flow is hard to follow is a genuine smell, since a test you
+      # cannot read cannot be trusted as a specification.
+      - path: _test\.go
+        linters:
+          - funlen
+          - dupl
   settings:
     dupl:
       # Initial threshold, conservative to avoid noise on small, legitimately
