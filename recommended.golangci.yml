@@ -21,6 +21,7 @@ linters:
     - unused # dead code: unused symbols within the module
     - funlen
     - nolintlint
+    - nestif
   settings:
     dupl:
       threshold: 100
@@ -39,6 +40,11 @@ linters:
       # decomposition: extract method, strategy map instead of nested switch,
       # early return. This is the strongest general-purpose lever in the set.
       min-complexity: 15
+    nestif:
+      # Independent of gocognit, not redundant: a SHORT function with a 4-level
+      # pyramid scores ~10 on gocognit and slips under it. Deep nesting is the
+      # single most characteristic signature of generated spaghetti.
+      min-complexity: 4
     nolintlint:
       # A linter cannot police the config that configures it. What it CAN do is
       # force every suppression to name its linter and explain itself in
@@ -90,12 +96,3 @@ linters:
               mayDependOn:
                 - core
                 - adapter
-  exclusions:
-    rules:
-      # Table-driven tests are idiomatic and long by design: the table is DATA,
-      # not logic. These three levers measure design pressure on production
-      # code; shrinking a test table to satisfy them would be exactly the
-      # design-free "fix" this harness exists to prevent. revive, nestif,
-      # unused, nolintlint and dlinter still apply to tests.
-      - path: _test\.go
-        linters: [funlen, dupl, gocognit]
