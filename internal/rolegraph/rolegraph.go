@@ -108,24 +108,16 @@ func (g *Graph) Resolve(rel string) (Role, bool) {
 	)
 
 	for _, p := range g.patterns {
-		switch p.kind {
-		case patternRoot:
-			if rel == "" {
+		if p.kind != patternPrefix {
+			if matches(p, rel) {
 				return p.role, true
 			}
-		case patternExact:
-			if rel == p.entry {
-				return p.role, true
-			}
-		case patternPrefix:
-			if rel == p.entry || strings.HasPrefix(rel, p.entry+"/") {
-				if len(p.entry) > bestPrefixLen ||
-					(len(p.entry) == bestPrefixLen && p.role < bestPrefix.role) {
-					bestPrefix = p
-					bestPrefixLen = len(p.entry)
-					havePrefix = true
-				}
-			}
+			continue
+		}
+		if matches(p, rel) && betterPrefix(p, bestPrefix, bestPrefixLen) {
+			bestPrefix = p
+			bestPrefixLen = len(p.entry)
+			havePrefix = true
 		}
 	}
 
@@ -133,6 +125,34 @@ func (g *Graph) Resolve(rel string) (Role, bool) {
 		return bestPrefix.role, true
 	}
 	return "", false
+}
+
+// matches reports whether rel is matched by pattern p, per p's kind: a root
+// pattern matches only the module-root package ("" ), an exact pattern
+// matches only its literal entry, and a prefix pattern matches its entry or
+// anything in its subtree.
+func matches(p pattern, rel string) bool {
+	switch p.kind {
+	case patternRoot:
+		return rel == ""
+	case patternExact:
+		return rel == p.entry
+	case patternPrefix:
+		return rel == p.entry || strings.HasPrefix(rel, p.entry+"/")
+	default:
+		return false
+	}
+}
+
+// betterPrefix reports whether candidate should replace best as the current
+// longest-prefix match, given best's entry length is bestLen. A longer entry
+// always wins; among equal-length entries, the tie is broken deterministically
+// by the lower role name.
+func betterPrefix(candidate, best pattern, bestLen int) bool {
+	if len(candidate.entry) != bestLen {
+		return len(candidate.entry) > bestLen
+	}
+	return candidate.role < best.role
 }
 
 // Allowed reports whether role from may depend on role to. A role may

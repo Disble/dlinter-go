@@ -15,19 +15,58 @@ linters:
     # ecosystem, so we reuse revive rather than reimplement it — dlinter's own
     # custom analyzers are reserved for what the ecosystem lacks (architecture).
     - revive
+    - funlen
+    - nolintlint
+    - nestif
   settings:
     dupl:
       # Initial threshold, conservative to avoid noise on small, legitimately
       # similar analyzer/test scaffolding. Tune down as the codebase grows.
       threshold: 100
+    funlen:
+      # A function longer than this is doing more than one thing. The honest
+      # fix is extraction; a dumb extraction still passes, which is why funlen
+      # is a MEDIUM lever and gocognit below is the strong one.
+      lines: 60
+      statements: 40
+      # Opposite of file-length-limit's choice, deliberately: comments INSIDE a
+      # function are what a good decomposition adds, so do not penalize them.
+      ignore-comments: true
     gocognit:
-      # Initial threshold; tunable. Below this, cognitive load is considered
-      # acceptable for this codebase's size.
-      min-complexity: 20
+      # Tightened from 20. Cognitive complexity has NO escape by relocation --
+      # moving code does not lower a function's score. The only way out is real
+      # decomposition: extract method, strategy map instead of nested switch,
+      # early return. This is the strongest general-purpose lever in the set.
+      min-complexity: 15
+    nestif:
+      # Independent of gocognit, not redundant: a SHORT function with a 4-level
+      # pyramid scores ~10 on gocognit and slips under it. Deep nesting is the
+      # single most characteristic signature of generated spaghetti.
+      min-complexity: 4
+    nolintlint:
+      # A linter cannot police the config that configures it. What it CAN do is
+      # force every suppression to name its linter and explain itself in
+      # English, turning silent deletion of a rule into a reviewable diff.
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+      allow-no-explanation: []
     revive:
       rules:
         - name: exported
         - name: package-comments
+        - name: file-length-limit
+          # Map-form arguments confirmed against revive v1.9.0 source, the
+          # version pinned via golangci-lint v2.1.0 (go.mod:82).
+          arguments:
+            - max: 400
+              # Count RAW lines. This preset also mandates doc comments; making
+              # comments free here would train the generator to treat them as
+              # weightless. File size is the WEAKEST lever -- its escape is
+              # sharding into foo2.go -- so it is set loose on purpose and is
+              # never the headline.
+              skipComments: false
+              skipBlankLines: false
     custom:
       dlinter:
         type: module
