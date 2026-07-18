@@ -109,6 +109,38 @@ Rules that keep the check predictable:
 - Packages with no role are ignored, as are stdlib and external imports — the rules constrain only your own module's import graph.
 - Exact and root matches always win over prefix matches.
 
+## `requireDoc` — documentation on unexported symbols
+
+Every unexported function and method must carry a doc comment.
+
+```
+tools/checkarchitecture/legacy_boundary_flow.go:32:1: requireDoc: unexported func "analyzeLegacyDataflow" has no doc comment (dlinter)
+```
+
+**This is on by default, and it is deliberately stricter than Go's own convention.** `revive` and `staticcheck` scope documentation to the exported surface, on the reasoning that unexported helpers are internal detail. dlinter disagrees: a private function that needs explaining needs it just as much as a public one, and the reader who has to maintain it has less to go on, not more.
+
+Read this before adopting it:
+
+- **It will be loud on an existing codebase.** One 133-file project we validated against produced 81 findings in a single package. That is the rule working, not misfiring — but budget for it rather than discovering it mid-PR.
+- **`init` and `main` are exempt.** They have no caller and no name worth documenting; requiring a comment there yields `// main is the entry point`, the exact tautology this rule should not manufacture.
+- **Exported symbols are not reported here** — `revive: exported` owns them, so the two never double-report the same defect.
+- **It cannot judge whether a comment is *useful*.** `// run runs the thing` satisfies it. No linter can catch a tautological doc comment; the rule buys you the presence of an explanation, and code review still owes you its quality.
+
+To opt out, or to scope it:
+
+```yaml
+linters:
+  settings:
+    custom:
+      dlinter:
+        settings:
+          requireDoc: false     # disable entirely
+  exclusions:
+    rules:
+      - path: _test\.go         # or keep it on, but not in tests
+        linters: [dlinter]
+```
+
 ## Why golangci-lint instead of a standalone tool?
 
 golangci-lint is already the orchestrator of the Go linting ecosystem (dead code via `unused`, duplication via `dupl`, complexity via `gocognit`, function length via `funlen`, nesting via `nestif`, 100+ linters). dlinter adds the missing piece — enforceable architecture contracts — without asking your team to adopt another binary, config format, or CI step.

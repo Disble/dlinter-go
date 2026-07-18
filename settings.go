@@ -6,11 +6,16 @@ package dlinter
 type Settings struct {
 	Roles map[string]RoleSpec `json:"roles"`
 
-	// RequireDoc enables the requireDoc analyzer, which reports unexported
-	// functions and methods with no doc comment. It is opt-in because it
-	// goes beyond Go's own convention of documenting only the exported
-	// surface; see pkg/analyzers/requiredoc for the reasoning.
-	RequireDoc bool `json:"requireDoc"`
+	// RequireDoc controls the requireDoc analyzer, which reports unexported
+	// functions and methods with no doc comment.
+	//
+	// It is ENABLED by default. dlinter is an opinionated linter: its
+	// defaults state the opinion, and a rule that ships off is a rule most
+	// projects never discover. Set it to false to opt out.
+	//
+	// The pointer distinguishes "unset" (use the default) from an explicit
+	// false, which a plain bool cannot express.
+	RequireDoc *bool `json:"requireDoc"`
 }
 
 // RoleSpec describes one architectural role: the packages that belong to it

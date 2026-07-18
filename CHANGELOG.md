@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`requireDoc` rule**: reports unexported functions and methods declared
+  without a doc comment. **Enabled by default** — dlinter is opinionated, and
+  a rule that ships off is a rule most projects never discover. `init` and
+  `main` are exempt; exported symbols remain with `revive: exported` so the
+  two never double-report. Opt out with `requireDoc: false`. See the README
+  for the caveats before adopting.
+- `godoclint` in the recommended preset: `revive: exported` enforces that doc
+  comments exist, `godoclint` enforces that the ones written are well-formed.
+
 ## [0.2.0] - 2026-07-18
 
 ### Added

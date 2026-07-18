@@ -48,7 +48,11 @@ func (p *plugin) BuildAnalyzers() ([]*analysis.Analyzer, error) {
 	analyzers := []*analysis.Analyzer{
 		maydependon.NewAnalyzer(g),
 	}
-	if p.settings.RequireDoc {
+	// requireDoc defaults to ON when the setting is absent: dlinter is
+	// opinionated, and its defaults are where the opinion lives. Kept inline
+	// rather than extracted, because a helper reachable only from this
+	// framework-invoked method would need its own deadcode exception.
+	if p.settings.RequireDoc == nil || *p.settings.RequireDoc {
 		analyzers = append(analyzers, requiredoc.NewAnalyzer())
 	}
 	return analyzers, nil
