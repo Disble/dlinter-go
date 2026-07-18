@@ -4,6 +4,42 @@ All notable changes to this project are documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-07-18
+
+### Added
+
+- **Discipline harness**: `recommended.golangci.yml` now bundles a coordinated
+  set of levers whose job is to make sprawl expensive to hide — file size
+  (`revive: file-length-limit`, 400), function length (`funlen`, 60/40),
+  cognitive complexity (`gocognit`, 15), nesting depth (`nestif`, 4), and
+  suppression hygiene (`nolintlint`: every `//nolint` must name its linter and
+  explain itself).
+- `docs/threat-model.md`: what the harness does and does not guarantee, plus a
+  governance baseline for keeping the config itself under review.
+- README section documenting each lever's cheapest dishonest escape, so the
+  weak bars are never mistaken for the strong ones.
+
+### Changed
+
+- **Pinned golangci-lint bumped to v2.12.2** (from v2.1.0). Versions up to
+  v2.11 build their internal clone with `-c advice.detachedHead=false` as a
+  single argument, which git 2.54 and newer reject
+  (`invalid key:  advice.detachedHead`), breaking `golangci-lint custom` on
+  current runners and any machine with modern git. **Consumers pinning v2.1.0
+  should update `.custom-gcl.yml`.**
+- Preset excludes `funlen` and `dupl` on `_test.go`, calibrated against a real
+  133-file codebase where 88% of `funlen` findings were tests. `gocognit` and
+  `nestif` still apply to tests deliberately.
+- Internal decompositions of `Graph.Resolve` and `runWithGraph`, forced by this
+  repo's own tightened thresholds — refactored, not exempted.
+
+### Notes
+
+- A custom package-cohesion ("god-package") analyzer was evaluated and
+  deliberately **not** shipped: no candidate metric survived its false-positive
+  story, and calibration across 33 real packages found a smooth continuum
+  rather than a bimodal distribution, leaving no honest threshold to pick.
+
 ## [0.1.0] - 2026-07-17
 
 ### Added
@@ -19,4 +55,5 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Three-stage CI (unit tests + analysistest, self-lint, deadcode) and local
   lefthook gates (pre-commit: gofmt, self-lint, tests; pre-push: deadcode).
 
+[0.2.0]: https://github.com/Disble/dlinter-go/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Disble/dlinter-go/releases/tag/v0.1.0
