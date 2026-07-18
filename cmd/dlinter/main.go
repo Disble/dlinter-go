@@ -8,6 +8,7 @@ package main
 import (
 	"github.com/Disble/dlinter-go/internal/rolegraph"
 	"github.com/Disble/dlinter-go/pkg/analyzers/maydependon"
+	"github.com/Disble/dlinter-go/pkg/analyzers/requiredoc"
 )
 
 // These references exist only to anchor cmd/dlinter's dependency on the
@@ -18,6 +19,7 @@ import (
 // module).
 var (
 	_ = maydependon.Analyzer
+	_ = requiredoc.Analyzer
 	_ rolegraph.Role
 )
 

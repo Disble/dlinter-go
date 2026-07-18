@@ -10,6 +10,7 @@ import (
 
 	"github.com/Disble/dlinter-go/internal/rolegraph"
 	"github.com/Disble/dlinter-go/pkg/analyzers/maydependon"
+	"github.com/Disble/dlinter-go/pkg/analyzers/requiredoc"
 )
 
 func init() {
@@ -31,8 +32,8 @@ func New(conf any) (register.LinterPlugin, error) {
 }
 
 // BuildAnalyzers translates the decoded Settings.Roles into a
-// *rolegraph.Graph and returns exactly one analyzer: the mayDependOn
-// analyzer, injected with that Graph.
+// *rolegraph.Graph and returns the mayDependOn analyzer injected with that
+// Graph, plus the requireDoc analyzer when Settings.RequireDoc is set.
 func (p *plugin) BuildAnalyzers() ([]*analysis.Analyzer, error) {
 	roles := make(map[string]rolegraph.RoleDef, len(p.settings.Roles))
 	for name, spec := range p.settings.Roles {
@@ -44,9 +45,13 @@ func (p *plugin) BuildAnalyzers() ([]*analysis.Analyzer, error) {
 
 	g := rolegraph.New(roles)
 
-	return []*analysis.Analyzer{
+	analyzers := []*analysis.Analyzer{
 		maydependon.NewAnalyzer(g),
-	}, nil
+	}
+	if p.settings.RequireDoc {
+		analyzers = append(analyzers, requiredoc.NewAnalyzer())
+	}
+	return analyzers, nil
 }
 
 // GetLoadMode returns LoadModeTypesInfo, which mayDependOn requires to

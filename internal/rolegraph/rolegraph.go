@@ -82,6 +82,9 @@ func New(roles map[string]RoleDef) *Graph {
 	return g
 }
 
+// classify compiles one configured package entry into a pattern, choosing
+// the matching rule from the entry's shape: "." is the module root, a
+// trailing slash marks a subtree prefix, and anything else matches exactly.
 func classify(role Role, entry string) pattern {
 	switch {
 	case entry == ".":

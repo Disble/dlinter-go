@@ -97,6 +97,11 @@ linters:
         type: module
         description: package-role / import-direction contracts for dlinter-go
         settings:
+          # Reports unexported funcs/methods with no doc comment. Opt-in:
+          # it goes beyond Go's convention of documenting only the exported
+          # surface. revive:exported still owns exported symbols, so the two
+          # never double-report.
+          requireDoc: true
           roles:
             core:
               packages:
