@@ -18,11 +18,12 @@ fi
 # this module, so it reports these as dead even though they are real,
 # externally-invoked API. Because cmd/dlinter address-takes only the shared
 # maydependon.Analyzer var (not NewAnalyzer), the helpers reachable only
-# through NewAnalyzer's closure (runWithGraph, relativize) and through
-# plugin.go's BuildAnalyzers (rolegraph.New, classify, Graph.Resolve,
-# Graph.Allowed) are also unreachable from a real main and share the same
-# false-positive class. See docs/spikes.md.
-out="$(deadcode ./... 2>&1 | grep -v -E '(plugin\.go:.*unreachable func: (init#1|New|plugin\.BuildAnalyzers|plugin\.GetLoadMode)|analyzer\.go:.*unreachable func: (NewAnalyzer|runWithGraph|relativize)|rolegraph\.go:.*unreachable func: (New|classify|Graph\.Resolve|Graph\.Allowed))')"
+# through NewAnalyzer's closure (runWithGraph, ForbiddenImport, relativize,
+# trimModule) and through plugin.go's BuildAnalyzers (rolegraph.New,
+# classify, Graph.Resolve, Graph.Allowed, matches, betterPrefix) are also
+# unreachable from a real main and share the same false-positive class. See
+# docs/spikes.md.
+out="$(deadcode ./... 2>&1 | grep -v -E '(plugin\.go:.*unreachable func: (init#1|New|plugin\.BuildAnalyzers|plugin\.GetLoadMode)|analyzer\.go:.*unreachable func: (NewAnalyzer|runWithGraph|ForbiddenImport|relativize|trimModule)|rolegraph\.go:.*unreachable func: (New|classify|Graph\.Resolve|Graph\.Allowed|matches|betterPrefix))')"
 if [ -n "$out" ]; then
   echo "$out"
   echo "deadcode found unreachable code (see output above)"

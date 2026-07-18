@@ -62,16 +62,8 @@ func runWithGraph(pass *analysis.Pass, g *rolegraph.Graph) (any, error) {
 				continue
 			}
 
-			importedRole, ok := g.Resolve(relativize(importPath, pass.Module))
-			if !ok {
-				continue
-			}
-
-			if importerRole == importedRole {
-				continue
-			}
-
-			if !g.Allowed(importerRole, importedRole) {
+			if ForbiddenImport(g, pass.Module.Path, importerRole, importPath) {
+				importedRole, _ := g.Resolve(trimModule(importPath, pass.Module.Path))
 				pass.Reportf(spec.Pos(), "role %q may not depend on role %q (import %q)", importerRole, importedRole, importPath)
 			}
 		}
@@ -80,14 +72,35 @@ func runWithGraph(pass *analysis.Pass, g *rolegraph.Graph) (any, error) {
 	return nil, nil
 }
 
+// ForbiddenImport reports whether importerRole may not depend on the role
+// resolved for importPath under module modPath, per g. An unresolved import
+// role (no configured role matches it) is never forbidden — the graph
+// constrains only this module's own packages. Exported so it can be unit
+// tested directly, without the analysistest overhead runWithGraph otherwise
+// requires.
+func ForbiddenImport(g *rolegraph.Graph, modPath string, importerRole rolegraph.Role, importPath string) bool {
+	importedRole, ok := g.Resolve(trimModule(importPath, modPath))
+	if !ok {
+		return false
+	}
+	if importerRole == importedRole {
+		return false
+	}
+	return !g.Allowed(importerRole, importedRole)
+}
+
 // relativize strips the module prefix from pkgPath, returning the
-// module-relative path that Graph.Resolve expects. pass.Module is never
-// nil under analysistest (only its Path is empty), so a single
-// TrimPrefix call correctly handles both real runtime (Module.Path set)
-// and analysistest/testdata (Module.Path == "") without a nil-check
-// branch: TrimPrefix with an empty prefix is a no-op.
+// module-relative path that Graph.Resolve expects.
 func relativize(pkgPath string, mod *analysis.Module) string {
-	rel := strings.TrimPrefix(pkgPath, mod.Path)
-	rel = strings.TrimPrefix(rel, "/")
-	return rel
+	return trimModule(pkgPath, mod.Path)
+}
+
+// trimModule strips modPath, then a leading "/", from pkgPath. pass.Module
+// is never nil under analysistest (only its Path is empty), so this
+// correctly handles both real runtime (Module.Path set) and
+// analysistest/testdata (Module.Path == "") without a nil-check branch:
+// TrimPrefix with an empty prefix is a no-op.
+func trimModule(pkgPath, modPath string) string {
+	rel := strings.TrimPrefix(pkgPath, modPath)
+	return strings.TrimPrefix(rel, "/")
 }
